@@ -1,3 +1,3 @@
 import HotVar from "./HotVar";
 
-export default HotVar;
+export { HotVar };
