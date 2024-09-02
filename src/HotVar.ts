@@ -1,7 +1,8 @@
 import io from "socket.io-client";
 
 export default class HotVar {
-  API_URL = "http://localhost:5000";
+  API_URL = "https://api.hotvar.com";
+
   vars: string[] = [];
   values: { [key: string]: string | null } = {};
   config: {

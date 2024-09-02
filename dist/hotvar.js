@@ -2244,7 +2244,7 @@ Object.assign(B, {
 });
 class at {
   constructor(e = {}) {
-    _(this, "API_URL", "http://localhost:5000");
+    _(this, "API_URL", "https://api.hotvar.com");
     _(this, "vars", []);
     _(this, "values", {});
     _(this, "config", {
