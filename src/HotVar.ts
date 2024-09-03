@@ -1,8 +1,8 @@
-import io from "socket.io-client";
+import io, { Socket } from "socket.io-client";
 
-type VarType = "string" | "number" | "boolean";
+export type VarType = "string" | "number" | "boolean";
 
-type ValueType = {
+export type ValueType = {
   type: VarType;
   value: DataTypeValue<ValueType["type"]>;
 };
@@ -15,7 +15,18 @@ type DataTypeValue<T extends VarType> = T extends "boolean"
   ? string
   : never;
 
-type Values = { [key: string]: ValueType | null };
+export type ValueResponse = ValueType | null;
+
+export type Values = { [key: string]: ValueResponse };
+export type VarTuple = [string, ValueResponse];
+
+export type Config = {
+  live: boolean;
+  ignoreEmpty: boolean;
+  vars: string[];
+  mode: "html" | "explicit";
+  onChange?: (VarTuple: VarTuple) => void;
+};
 
 export default class HotVar {
   private API_URL = import.meta.env.PROD
@@ -24,28 +35,36 @@ export default class HotVar {
 
   private vars: string[] = [];
   private values: Values = {};
-  private config: {
-    live: boolean;
-    ignoreEmpty: boolean;
-  } = {
+  private config: Config = {
     live: true,
     ignoreEmpty: true,
+    vars: [],
+    mode: "html",
   };
+  private socket: Socket | null = null;
 
-  constructor(options: Partial<typeof this.config> = {}) {
+  constructor(options: Partial<Config> = {}) {
     this.config = {
       ...this.config,
       ...options,
     };
+    this.vars = [...this.config.vars];
 
-    this.init();
-    this.fetchVars();
+    if (this.config.mode === "html") {
+      this.initHTMLMode();
+    } else {
+      this.initExplicitMode();
+    }
     if (this.config.live) {
       this.initSocket();
     }
   }
 
-  init() {
+  private initExplicitMode() {
+    this.fetchVars();
+  }
+
+  private initHTMLMode() {
     const els = document.querySelectorAll("[data-hotvar]");
     for (const el of els) {
       const varName = el.getAttribute("data-hotvar");
@@ -56,34 +75,51 @@ export default class HotVar {
         this.vars.push(varName);
       }
     }
+    this.fetchVars();
   }
 
-  fetchVars() {
-    const fetchVars = this.vars.join(":");
+  private fetchVars() {
+    const fetchVars = this.vars.join(";");
     fetch(`${this.API_URL}/var/${fetchVars}`)
       .then((res) => res.json())
       .then((res: Values) => {
+        Object.keys(res).forEach((name) => {
+          this.propagateVariable([name, res[name]]);
+        });
         this.commitValues(res);
       });
   }
 
-  initSocket() {
-    const socket = io(this.API_URL);
+  private initSocket() {
+    this.socket = io(this.API_URL);
     this.vars.forEach((varName) => {
-      socket.on(varName, (update: ValueType) => {
+      if (!this.socket) return;
+      // `update` will never be null
+      this.socket.on(varName, (update: ValueType) => {
+        this.propagateVariable([varName, update]);
         this.commitValues({ [varName]: update });
       });
     });
   }
 
-  commitValues(values: Values) {
-    this.values = { ...this.values, ...values };
-    Object.keys(this.values).forEach((name) => {
-      this.findAndUpdate(name, this.values[name]);
-    });
+  destroy() {
+    this.socket && this.socket.close();
   }
 
-  findAndUpdate(varName: string, value: ValueType | null) {
+  private propagateVariable(VarTuple: VarTuple) {
+    this.config.onChange && this.config.onChange(VarTuple);
+  }
+
+  private commitValues(values: Values) {
+    this.values = { ...this.values, ...values };
+    if (this.config.mode === "html") {
+      Object.keys(this.values).forEach((name) => {
+        this.findAndUpdate(name, this.values[name]);
+      });
+    }
+  }
+
+  private findAndUpdate(varName: string, value: ValueResponse) {
     if (!value) return;
 
     const el = document.querySelector(`[data-hotvar='${varName}']`);

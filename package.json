@@ -4,6 +4,7 @@
   "type": "module",
   "main": "dist/hotvar.umd.cjs",
   "module": "dist/hotvar.js",
+  "types": "dist/main.d.ts",
   "files": [
     "dist"
   ],
@@ -14,7 +15,8 @@
   },
   "devDependencies": {
     "typescript": "^5.5.3",
-    "vite": "^5.4.1"
+    "vite": "^5.4.1",
+    "vite-plugin-dts": "^4.1.0"
   },
   "dependencies": {
     "socket.io-client": "^4.7.5"
