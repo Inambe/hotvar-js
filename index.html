@@ -11,6 +11,9 @@
       Hello,
       <span data-hotvar="inambe:inam" data-hotvar-placeholder="World!"></span>
     </h1>
-    <script type="module" src="/src/main.ts"></script>
+    <script type="module">
+      import { HotVar } from "/src/main.ts";
+      new HotVar();
+    </script>
   </body>
 </html>

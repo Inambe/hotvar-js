@@ -1,11 +1,30 @@
 import io from "socket.io-client";
 
-export default class HotVar {
-  API_URL = "https://api.hotvar.com";
+type VarType = "string" | "number" | "boolean";
 
-  vars: string[] = [];
-  values: { [key: string]: string | null } = {};
-  config: {
+type ValueType = {
+  type: VarType;
+  value: DataTypeValue<ValueType["type"]>;
+};
+
+type DataTypeValue<T extends VarType> = T extends "boolean"
+  ? boolean
+  : T extends "number"
+  ? number
+  : T extends "string"
+  ? string
+  : never;
+
+type Values = { [key: string]: ValueType | null };
+
+export default class HotVar {
+  private API_URL = import.meta.env.PROD
+    ? "https://api.hotvar.com"
+    : "http://localhost:5000";
+
+  private vars: string[] = [];
+  private values: Values = {};
+  private config: {
     live: boolean;
     ignoreEmpty: boolean;
   } = {
@@ -43,40 +62,36 @@ export default class HotVar {
     const fetchVars = this.vars.join(":");
     fetch(`${this.API_URL}/var/${fetchVars}`)
       .then((res) => res.json())
-      .then((res) => {
-        Object.keys(res).forEach((name) => {
-          this.values[name] = res[name];
-        });
-        this.commitValues();
+      .then((res: Values) => {
+        this.commitValues(res);
       });
   }
 
   initSocket() {
     const socket = io(this.API_URL);
-    this.vars.forEach((name) => {
-      socket.on(name, (update) => {
-        this.values[name] = update;
-        this.commitValues(name);
+    this.vars.forEach((varName) => {
+      socket.on(varName, (update: ValueType) => {
+        this.commitValues({ [varName]: update });
       });
     });
   }
 
-  commitValues(name?: string) {
-    if (name) {
+  commitValues(values: Values) {
+    this.values = { ...this.values, ...values };
+    Object.keys(this.values).forEach((name) => {
       this.findAndUpdate(name, this.values[name]);
-    } else {
-      Object.keys(this.values).forEach((name) => {
-        this.findAndUpdate(name, this.values[name]);
-      });
-    }
+    });
   }
 
-  findAndUpdate(varName: string, value: string | null) {
-    if (!value && this.config.ignoreEmpty) return;
+  findAndUpdate(varName: string, value: ValueType | null) {
+    if (!value) return;
 
     const el = document.querySelector(`[data-hotvar='${varName}']`);
+
     if (el) {
-      el.innerHTML = value ?? "";
+      if (value.type === "string" || value.type === "number") {
+        el.innerHTML = value.value.toString();
+      }
     }
   }
 }
