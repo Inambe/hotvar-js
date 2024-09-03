@@ -2248,7 +2248,7 @@ class ht {
     b(this, "vars", []);
     b(this, "values", {});
     b(this, "config", {
-      live: !0,
+      live: !1,
       ignoreEmpty: !0,
       vars: [],
       mode: "html"

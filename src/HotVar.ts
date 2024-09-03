@@ -36,7 +36,7 @@ export default class HotVar {
   private vars: string[] = [];
   private values: Values = {};
   private config: Config = {
-    live: true,
+    live: false,
     ignoreEmpty: true,
     vars: [],
     mode: "html",
