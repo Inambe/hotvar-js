@@ -1,8 +1,12 @@
 {
   "name": "hotvar-js",
-  "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
+  "main": "dist/hotvar.umd.cjs",
+  "module": "dist/hotvar.js",
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
