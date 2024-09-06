@@ -2,9 +2,9 @@ import io, { Socket } from "socket.io-client";
 
 export type VarType = "string" | "number" | "boolean";
 
-export type ValueType = {
+export type Value = {
   type: VarType;
-  value: DataTypeValue<ValueType["type"]>;
+  value: DataTypeValue<Value["type"]>;
 };
 
 type DataTypeValue<T extends VarType> = T extends "boolean"
@@ -15,7 +15,7 @@ type DataTypeValue<T extends VarType> = T extends "boolean"
   ? string
   : never;
 
-export type ValueResponse = ValueType | null;
+export type ValueResponse = Value | null;
 
 export type Values = { [key: string]: ValueResponse };
 export type VarTuple = [string, ValueResponse];
@@ -29,7 +29,7 @@ export type Config = {
 };
 
 export default class HotVar {
-  private API_URL = import.meta.env.PROD
+  private static API_URL = import.meta.env.PROD
     ? "https://api.hotvar.com"
     : "http://localhost:5000";
 
@@ -79,23 +79,20 @@ export default class HotVar {
   }
 
   private fetchVars() {
-    const fetchVars = this.vars.join(";");
-    fetch(`${this.API_URL}/var/${fetchVars}`)
-      .then((res) => res.json())
-      .then((res: Values) => {
-        Object.keys(res).forEach((name) => {
-          this.propagateVariable([name, res[name]]);
-        });
-        this.commitValues(res);
+    HotVar.fetchMany(this.vars).then((res) => {
+      Object.keys(res).forEach((name) => {
+        this.propagateVariable([name, res[name]]);
       });
+      this.commitValues(res);
+    });
   }
 
   private initSocket() {
-    this.socket = io(this.API_URL);
+    this.socket = io(HotVar.API_URL);
     this.vars.forEach((varName) => {
       if (!this.socket) return;
       // `update` will never be null
-      this.socket.on(varName, (update: ValueType) => {
+      this.socket.on(varName, (update: Value) => {
         this.propagateVariable([varName, update]);
         this.commitValues({ [varName]: update });
       });
@@ -106,20 +103,33 @@ export default class HotVar {
     this.socket && this.socket.close();
   }
 
-  private propagateVariable(VarTuple: VarTuple) {
-    this.config.onChange && this.config.onChange(VarTuple);
+  static async fetchMany(varNames: string[]) {
+    const varNamesString = varNames.join(";");
+    return (await (
+      await fetch(`${this.API_URL}/var/${varNamesString}`)
+    ).json()) as Values;
+  }
+
+  static async fetchOne(varName: string) {
+    return (await (await fetch(`${this.API_URL}/var/${varName}`)).json())[
+      varName
+    ] as ValueResponse;
+  }
+
+  private propagateVariable(varTuple: VarTuple) {
+    this.config.onChange && this.config.onChange(varTuple);
   }
 
   private commitValues(values: Values) {
     this.values = { ...this.values, ...values };
     if (this.config.mode === "html") {
       Object.keys(this.values).forEach((name) => {
-        this.findAndUpdate(name, this.values[name]);
+        this.findAndUpdate([name, this.values[name]]);
       });
     }
   }
 
-  private findAndUpdate(varName: string, value: ValueResponse) {
+  private findAndUpdate([varName, value]: VarTuple) {
     if (!value) return;
 
     const el = document.querySelector(`[data-hotvar='${varName}']`);
