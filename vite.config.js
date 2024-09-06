@@ -16,7 +16,7 @@ export default defineConfig({
   },
   plugins: [
     dts({
-      insertTypesEntry: true,
+      rollupTypes: true,
     }),
   ],
 });
