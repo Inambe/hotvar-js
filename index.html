@@ -11,9 +11,17 @@
       Hello,
       <span data-hotvar="inambe:inam" data-hotvar-placeholder="World!"></span>
     </h1>
+    <div data-hotvar="inambe:banner-text"></div>
     <script type="module">
       import { HotVar } from "/src/main.ts";
-      new HotVar();
+      new HotVar({ live: true });
+      const one = await HotVar.fetchOne("inambe:show-banner");
+      console.log({ one });
+      const many = await HotVar.fetchMany([
+        "inambe:show-banner",
+        "inambe:subs",
+      ]);
+      console.log({ many });
     </script>
   </body>
 </html>
