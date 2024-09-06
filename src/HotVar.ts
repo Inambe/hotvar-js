@@ -22,7 +22,6 @@ export type VarTuple = [string, ValueResponse];
 
 export type Config = {
   live: boolean;
-  ignoreEmpty: boolean;
   vars: string[];
   mode: "html" | "explicit";
   onChange?: (VarTuple: VarTuple) => void;
@@ -37,7 +36,6 @@ export default class HotVar {
   private values: Values = {};
   private config: Config = {
     live: false,
-    ignoreEmpty: true,
     vars: [],
     mode: "html",
   };
